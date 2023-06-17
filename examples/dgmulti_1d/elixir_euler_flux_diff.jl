@@ -1,6 +1,6 @@
 using Trixi, OrdinaryDiffEq
 
-surface_flux = FluxLaxFriedrichs()
+surface_flux = flux_lax_friedrichs
 volume_flux = flux_ranocha
 dg = DGMulti(polydeg = 3, element_type = Line(), approximation_type = Polynomial(),
              surface_integral = SurfaceIntegralWeakForm(surface_flux),

@@ -45,8 +45,9 @@ alive_callback = AliveCallback(analysis_interval = analysis_interval)
 
 callbacks = CallbackSet(summary_callback,
                         analysis_callback,
-                        #stepsize_callback,
-                        alive_callback)                        #=glm_speed_callback=#
+                        # stepsize_callback,
+                        # glm_speed_callback,
+                        alive_callback)
 
 ###############################################################################
 # run the simulation

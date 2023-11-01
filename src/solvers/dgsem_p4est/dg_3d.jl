@@ -529,7 +529,7 @@ function calc_mortar_flux!(surface_flux_values,
     @unpack contravariant_vectors = cache.elements
     @unpack fstar_threaded, fstar_tmp_threaded = cache
     index_range = eachnode(dg)
-
+    
     @threaded for mortar in eachmortar(dg, cache)
         # Choose thread-specific pre-allocated container
         fstar = fstar_threaded[Threads.threadid()]

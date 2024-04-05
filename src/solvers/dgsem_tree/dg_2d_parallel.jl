@@ -768,7 +768,7 @@ function calc_mpi_mortar_flux!(surface_flux_values,
     @unpack surface_flux = surface_integral
     @unpack u_lower, u_upper, orientations = cache.mpi_mortars
     @unpack fstar_upper_threaded, fstar_lower_threaded = cache
-
+    println("771. dg_2d_parallel treemesh\t", mpi_rank())
     @threaded for mortar in eachmpimortar(dg, cache)
         # Choose thread-specific pre-allocated container
         fstar_upper = fstar_upper_threaded[Threads.threadid()]

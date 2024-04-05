@@ -61,7 +61,6 @@ function AMRCallback(semi, controller, adaptor;
                                                                                        dynamic_load_balancing,
                                                                                        adaptor,
                                                                                        amr_cache)
-
     DiscreteCallback(condition, amr_callback,
                      save_positions = (false, false),
                      initialize = initialize!)
@@ -133,7 +132,6 @@ function initialize!(cb::DiscreteCallback{Condition, Affect!}, u, t,
                      integrator) where {Condition, Affect! <: AMRCallback}
     amr_callback = cb.affect!
     semi = integrator.p
-
     @trixi_timeit timer() "initial condition AMR" if amr_callback.adapt_initial_condition
         # iterate until mesh does not change anymore
         has_changed = amr_callback(integrator,
@@ -218,7 +216,6 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::TreeMesh,
     u = wrap_array(u_ode, mesh, equations, dg, cache)
     lambda = @trixi_timeit timer() "indicator" controller(u, mesh, equations, dg, cache,
                                                           t = t, iter = iter)
-
     if mpi_isparallel()
         # Collect lambda for all elements
         lambda_global = Vector{eltype(lambda)}(undef, nelementsglobal(dg, cache))
@@ -536,7 +533,6 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::P4estMesh,
                                      only_refine = false, only_coarsen = false,
                                      passive_args = ())
     @unpack controller, adaptor = amr_callback
-
     u = wrap_array(u_ode, mesh, equations, dg, cache)
     lambda = @trixi_timeit timer() "indicator" controller(u, mesh, equations, dg, cache,
                                                           t = t, iter = iter)
@@ -544,7 +540,6 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::P4estMesh,
     @boundscheck begin
         @assert axes(lambda)==(Base.OneTo(ncells(mesh)),) ("Indicator array (axes = $(axes(lambda))) and mesh cells (axes = $(Base.OneTo(ncells(mesh)))) have different axes")
     end
-
     # Copy controller value of each quad to the quad's user data storage
     iter_volume_c = cfunction(copy_to_quad_iter_volume, Val(ndims(mesh)))
 
@@ -574,7 +569,6 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::P4estMesh,
     @trixi_timeit timer() "coarsen" if !only_refine
         # Coarsen mesh
         coarsened_original_cells = @trixi_timeit timer() "mesh" coarsen!(mesh)
-
         # coarsen solver
         @trixi_timeit timer() "solver" coarsen!(u_ode, adaptor, mesh, equations, dg,
                                                 cache, cache_parabolic,
@@ -608,7 +602,10 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::P4estMesh,
                                                     mpi_nranks() + 1)
                 old_global_first_quadrant = copy(global_first_quadrant)
                 partition!(mesh)
-                rebalance_solver!(u_ode, mesh, equations, dg, cache,
+
+                # Here we created a specilaized function that also rebalances the cache_parabolic 
+                # for parallel computaions
+                rebalance_solver!(u_ode, mesh, equations, dg, cache, cache_parabolic,
                                   old_global_first_quadrant)
             end
         end
@@ -642,7 +639,6 @@ function (amr_callback::AMRCallback)(u_ode::AbstractVector, mesh::P4estMesh,
                                      only_refine = false, only_coarsen = false,
                                      passive_args = ())
     @unpack controller, adaptor = amr_callback
-
     u = wrap_array(u_ode, mesh, equations, dg, cache)
     lambda = @trixi_timeit timer() "indicator" controller(u, mesh, equations, dg, cache,
                                                           t = t, iter = iter)
@@ -965,7 +961,6 @@ function (controller::ControllerThreeLevel)(u::AbstractArray{<:Any},
                                             kwargs...)
     @unpack controller_value = controller.cache
     resize!(controller_value, nelements(dg, cache))
-
     alpha = controller.indicator(u, mesh, equations, dg, cache; kwargs...)
     current_levels = current_element_levels(mesh, dg, cache)
 
@@ -1105,7 +1100,6 @@ function (controller::ControllerThreeLevelCombined)(u::AbstractArray{<:Any},
                                                     kwargs...)
     @unpack controller_value = controller.cache
     resize!(controller_value, nelements(dg, cache))
-
     alpha = controller.indicator_primary(u, mesh, equations, dg, cache; kwargs...)
     alpha_secondary = controller.indicator_secondary(u, mesh, equations, dg, cache)
 

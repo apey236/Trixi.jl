@@ -446,6 +446,69 @@ end
     return nothing
 end
 
+@inline function mortar_fluxes_to_elements_divergence!(surface_flux_values,
+                                                       mesh::Union{P4estMesh{2},
+                                                                   T8codeMesh{2}},
+                                                       equations::AbstractEquationsParabolic,
+                                                       mortar_l2::LobattoLegendreMortarL2,
+                                                       dg::DGSEM, cache, mortar, fstar,
+                                                       u_buffer)
+    @unpack neighbor_ids, node_indices = cache.mortars
+    # Copy solution small to small
+    small_indices = node_indices[1, mortar]
+    small_direction = indices2direction(small_indices)
+
+    for position in 1:2
+        element = neighbor_ids[position, mortar]
+        for i in eachnode(dg)
+            for v in eachvariable(equations)
+                surface_flux_values[v, i, small_direction, element] = fstar[position][v,
+                                                                                      i]
+            end
+        end
+    end
+
+    # Project small fluxes to large element.
+    multiply_dimensionwise!(u_buffer,
+                            mortar_l2.reverse_upper, fstar[2],
+                            mortar_l2.reverse_lower, fstar[1])
+
+    # The flux is calculated in the outward direction of the small elements,
+    # so the sign must be switched to get the flux in outward direction
+    # of the large element.
+    # The contravariant vectors of the large element (and therefore the normal
+    # vectors of the large element as well) are twice as large as the
+    # contravariant vectors of the small elements. Therefore, the flux needs
+    # to be scaled by a factor of 2 to obtain the flux of the large element.
+    u_buffer .*= -2
+
+    # Copy interpolated flux values from buffer to large element face in the
+    # correct orientation.
+    # Note that the index of the small sides will always run forward but
+    # the index of the large side might need to run backwards for flipped sides.
+    large_element = neighbor_ids[3, mortar]
+    large_indices = node_indices[2, mortar]
+    large_direction = indices2direction(large_indices)
+
+    if :i_backward in large_indices
+        for i in eachnode(dg)
+            for v in eachvariable(equations)
+                surface_flux_values[v, end + 1 - i, large_direction, large_element] = u_buffer[v,
+                                                                                               i]
+            end
+        end
+    else
+        for i in eachnode(dg)
+            for v in eachvariable(equations)
+                surface_flux_values[v, i, large_direction, large_element] = u_buffer[v,
+                                                                                     i]
+            end
+        end
+    end
+
+    return nothing
+end
+
 # This version is used for parabolic gradient computations
 @inline function calc_interface_flux!(surface_flux_values, mesh::P4estMesh{2},
                                       nonconservative_terms::False,
@@ -800,9 +863,9 @@ function calc_mortar_flux_divergence!(surface_flux_values,
         u_buffer = cache.u_threaded[Threads.threadid()]
 
         # this reuses the hyperbolic version of `mortar_fluxes_to_elements!`
-        mortar_fluxes_to_elements!(surface_flux_values,
-                                   mesh, equations, mortar_l2, dg, cache,
-                                   mortar, fstar, u_buffer)
+        mortar_fluxes_to_elements_divergence!(surface_flux_values,
+                                              mesh, equations, mortar_l2, dg, cache,
+                                              mortar, fstar, u_buffer)
     end
 
     return nothing
@@ -825,7 +888,6 @@ end
 
     u_ll, u_rr = get_surface_node_vars(u, equations, dg, position_index, node_index,
                                        mortar_index)
-
     # TODO: parabolic; only BR1 at the moment
     flux_ = 0.5 * (u_ll + u_rr)
 

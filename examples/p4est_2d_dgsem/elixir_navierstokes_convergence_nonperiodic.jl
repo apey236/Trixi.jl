@@ -13,15 +13,15 @@ equations_parabolic = CompressibleNavierStokesDiffusion2D(equations, mu = mu(),
                                                           gradient_variables = GradientVariablesPrimitive())
 
 # Create DG solver with polynomial degree = 3 and (local) Lax-Friedrichs/Rusanov flux as surface flux
-solver = DGSEM(polydeg = 3, surface_flux = flux_lax_friedrichs,
+solver = DGSEM(polydeg = 7, surface_flux = flux_lax_friedrichs,
                volume_integral = VolumeIntegralWeakForm())
 
 coordinates_min = (-1.0, -1.0) # minimum coordinates (min(x), min(y))
 coordinates_max = (1.0, 1.0) # maximum coordinates (max(x), max(y))
 
-trees_per_dimension = (4, 4)
+trees_per_dimension = (8, 8)
 mesh = P4estMesh(trees_per_dimension,
-                 polydeg = 3, initial_refinement_level = 2,
+                 polydeg = 7, initial_refinement_level = 2,
                  coordinates_min = coordinates_min, coordinates_max = coordinates_max,
                  periodicity = (false, false))
 

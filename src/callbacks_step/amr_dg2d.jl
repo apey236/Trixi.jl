@@ -98,13 +98,11 @@ function refine!(u_ode::AbstractVector, adaptor, mesh::Union{TreeMesh{2}, P4estM
     old_u_ode = copy(u_ode)
     GC.@preserve old_u_ode begin # OBS! If we don't GC.@preserve old_u_ode, it might be GC'ed
         old_u = wrap_array(old_u_ode, mesh, equations, dg, cache)
-
         reinitialize_containers!(mesh, equations, dg, cache)
 
         resize!(u_ode,
                 nvariables(equations) * nnodes(dg)^ndims(mesh) * nelements(dg, cache))
         u = wrap_array(u_ode, mesh, equations, dg, cache)
-
         # Loop over all elements in old container and either copy them or refine them
         element_id = 1
         for old_element_id in 1:old_n_elements
@@ -143,7 +141,6 @@ function refine!(u_ode::AbstractVector, adaptor,
     # Call `refine!` for the hyperbolic part, which does the heavy lifting of
     # actually transferring the solution to the refined cells
     refine!(u_ode, adaptor, mesh, equations, dg, cache, elements_to_refine)
-
     # Resize parabolic helper variables
     @unpack viscous_container = cache_parabolic
     resize!(viscous_container, equations, dg, cache)
@@ -171,7 +168,6 @@ function refine_element!(u::AbstractArray{<:Any, 4}, element_id,
     lower_right_id = element_id + 1
     upper_left_id = element_id + 2
     upper_right_id = element_id + 3
-
     @boundscheck begin
         @assert old_element_id >= 1
         @assert size(old_u, 1) == nvariables(equations)
@@ -241,7 +237,6 @@ function coarsen!(u_ode::AbstractVector, adaptor,
         end
         return
     end
-
     # Determine for each old element whether it needs to be removed
     to_be_removed = falses(nelements(dg, cache))
     to_be_removed[elements_to_remove] .= true

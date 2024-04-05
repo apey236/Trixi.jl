@@ -223,31 +223,36 @@ function reinitialize_containers!(mesh::ParallelP4estMesh, equations, dg::DGSEM,
     @unpack boundaries = cache
     resize!(boundaries, required.boundaries)
 
-    # resize mortars container
-    @unpack mortars = cache
-    resize!(mortars, required.mortars)
-
-    # resize mpi_interfaces container
-    @unpack mpi_interfaces = cache
-    resize!(mpi_interfaces, required.mpi_interfaces)
-
     # resize mpi_mortars container
-    @unpack mpi_mortars = cache
-    resize!(mpi_mortars, required.mpi_mortars)
+    if hasproperty(cache, :mortars) # cache_parabolic does not carry mortars
+        # resize mortars container
+        @unpack mortars = cache
+        resize!(mortars, required.mortars)
 
-    # re-initialize containers together to reduce
-    # the number of iterations over the mesh in p4est
-    init_surfaces!(interfaces, mortars, boundaries, mpi_interfaces, mpi_mortars, mesh)
+        # resize mpi_interfaces container
+        @unpack mpi_interfaces = cache
+        resize!(mpi_interfaces, required.mpi_interfaces)
 
-    # re-initialize MPI cache
-    @unpack mpi_cache = cache
-    init_mpi_cache!(mpi_cache, mesh, mpi_interfaces, mpi_mortars,
-                    nvariables(equations), nnodes(dg), eltype(elements))
+        @unpack mpi_mortars = cache
+        resize!(mpi_mortars, required.mpi_mortars)
 
-    # re-initialize and distribute normal directions of MPI mortars; requires MPI communication, so
-    # the MPI cache must be re-initialized before
-    init_normal_directions!(mpi_mortars, dg.basis, elements)
-    exchange_normal_directions!(mpi_mortars, mpi_cache, mesh, nnodes(dg))
+        # re-initialize containers together to reduce
+        # the number of iterations over the mesh in p4est
+        init_surfaces!(interfaces, mortars, boundaries, mpi_interfaces, mpi_mortars,
+                       mesh)
+
+        # re-initialize MPI cache
+        @unpack mpi_cache = cache
+        init_mpi_cache!(mpi_cache, mesh, mpi_interfaces, mpi_mortars,
+                        nvariables(equations), nnodes(dg), eltype(elements))
+
+        # re-initialize and distribute normal directions of MPI mortars; requires MPI communication, so
+        # the MPI cache must be re-initialized before
+        init_normal_directions!(mpi_mortars, dg.basis, elements)
+        exchange_normal_directions!(mpi_mortars, mpi_cache, mesh, nnodes(dg))
+    else
+        init_surfaces!(interfaces, nothing, boundaries, nothing, nothing, mesh)
+    end
 end
 
 # A helper struct used in initialization methods below

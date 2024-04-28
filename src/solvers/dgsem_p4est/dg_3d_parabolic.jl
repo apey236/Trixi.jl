@@ -711,6 +711,7 @@ function prolong2mortars_divergence!(cache, flux_viscous,
         # Copy solution of large element face to buffer in the
         # correct orientation
         large_indices = node_indices[2, mortar]
+        direction_index = indices2direction(large_indices)
 
         i_large_start, i_large_step_i, i_large_step_j = index_to_start_step_3d(large_indices[1],
                                                                                index_range)
